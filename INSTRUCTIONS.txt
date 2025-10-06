@@ -1,0 +1,188 @@
+﻿Absolutely—here’s a ready-to-use, copy-paste Cursor / AppCursor prompt that will get it to build a Python analysis app for your SurveyCTO export. It assumes you’ll provide:
+* a raw survey export CSV (column headers = name from the survey)
+
+* a questions CSV with at least columns: type, name, label (optional analysis/note)
+
+* optionally, a choices CSV with columns like list_name, name (choice code), label (choice text). If you don’t have this now, the app should still work using codes.
+
+It outputs per-question analyses in top-to-bottom survey order, with the exact visuals/statistics you asked for.
+________________
+
+
+Prompt for Cursor (paste this in one go)
+You are building a small Python app that analyzes SurveyCTO data. Deliver a clean, self-contained solution that runs locally with streamlit run app.py.
+Goal
+Given:
+   1. a survey data CSV (raw SurveyCTO export; headers are question names),
+
+   2. a questions CSV with columns: type, name, label (optional analysis, note),
+
+   3. (optional) a choices CSV with columns: list_name, name, label,
+
+render a per-question report in the same order as the questions CSV. For each question type, do:
+      * Integer / Decimal (numeric):
+
+         * Show mean, median, mode (if no exact mode exists, state “no single repeated value; showing modal bin”).
+
+         * Plot a bar-like histogram with sensible cutoffs using the Freedman–Diaconis rule for bin width, capped at 30 bins. Axis labels and counts must be clear.
+
+            * Select-one:
+
+               * Show raw % distribution among non-missing responses.
+
+               * Plot a pie chart with labels. If a choices CSV is present, map codes → labels; otherwise show codes.
+
+                  * Select-multiple:
+
+                     * SurveyCTO stores these as space-separated codes (e.g., "a b d").
+
+                     * For each option, compute % of respondents who selected that option using denominator = non-missing responses for that question.
+
+                     * Show a bar chart with y-axis 0–100%.
+
+                     * If a choices CSV is present, map codes → labels; otherwise show codes.
+
+                        * Text:
+
+                           * Show a written list of all answers (verbatim), in question order.
+
+                           * For long lists, display the first 200 in the UI and offer a download of the full list as CSV.
+
+General:
+                              * Treat empty strings, "NA", "N/A", "na", and blank cells as missing.
+
+                              * Use questions.csv order to control top→bottom rendering. Skip items without a matching data column.
+
+                              * Handle SurveyCTO type values like integer, decimal, text, select_one X, select_multiple Y. You may also encounter begin group, end group, note, etc.—skip non-question types.
+
+                              * If choices.csv is missing, still analyze counts using the raw codes.
+
+                              * All percentages should be rounded to 1 decimal place.
+
+                              * All charts must have clear titles using the question label (fallback to name if label missing).
+
+                              * Provide a sidebar uploader for the three CSVs and a download section for machine-readable outputs (CSV): per-question summaries for numeric stats, select-one %, select-multiple %, and text answers.
+
+Tech & UX
+                                 * Python ≥3.10
+
+                                 * streamlit, pandas, numpy, plotly.express (for charts), scipy (for stats if needed)
+
+                                 * One file app.py. Keep code modular with helper functions.
+
+                                 * Clean, minimal UI: left sidebar for file uploads and options; main pane lists questions in order with compact cards.
+
+                                 * Include a toggle to exclude “Don’t know/Refuse/Other” labels from pie/bar charts (default: included). If excluded, show a footnote with what was removed.
+
+                                 * Provide a small Data dictionary tab: show detected questions, inferred type, #non-missing, and whether choices mapping was found.
+
+Edge cases
+                                    * Mode for continuous data: if no repeated values, report “no exact mode” and instead display the modal bin midpoint and width.
+
+                                    * Select-multiple empty (all missing): show a friendly “No responses” message.
+
+                                    * Unexpected types: display “Type not supported” but keep the app running.
+
+                                    * Choice mapping mismatch: if some codes are missing from choices, show the code as-is and add a warning line under the chart.
+
+Output format details
+                                       * Numeric summary table columns: question_name, label, n_nonmissing, mean, median, mode_value (or modal_bin), sd, min, p25, p75, max.
+
+                                       * Select-one summary: question_name, label, choice_code, choice_label, count, percent.
+
+                                       * Select-multiple summary: question_name, label, choice_code, choice_label, selected_count, selected_percent.
+
+                                       * Text answers export: question_name, label, response (one row per answer).
+
+                                       * Provide download buttons for each export.
+
+Implementation sketch (follow this structure)
+                                          1. Sidebar:
+
+                                             * Uploaders for: survey_data.csv, questions.csv, (optional) choices.csv.
+
+                                             * Checkbox: “Exclude DK/Refuse/Other” (default off). If on, drop rows whose choice_label matches regex like (?i)\b(don'?t know|refuse|other|unsure)\b.
+
+                                                2. Load & normalize:
+
+                                                   * Read CSVs with dtype=str. Strip whitespace from headers and values.
+
+                                                   * Normalize missing to NaN.
+
+                                                   * Parse questions.type to infer category:
+
+                                                      * numeric if type in {integer, decimal}.
+
+                                                      * select_one if startswith select_one.
+
+                                                      * select_multiple if startswith select_multiple.
+
+                                                      * text if equals text.
+
+                                                         * For select types, extract list_name (the token after the space).
+
+                                                            3. Choice map:
+
+                                                               * If choices.csv is supplied, build choices_map[list_name][code] = label.
+
+                                                                  4. Per-question render (loop over questions.csv order):
+
+                                                                     * Skip non-question types (e.g., groups, notes).
+
+                                                                     * If name not in survey columns, display a subtle warning card and continue.
+
+                                                                     * numeric:
+
+                                                                        * Coerce to numeric with pd.to_numeric(errors="coerce").
+
+                                                                        * Compute stats; Freedman–Diaconis for bins (cap 30).
+
+                                                                        * Plot histogram via plotly.express.histogram.
+
+                                                                           * select_one:
+
+                                                                              * Count non-missing; normalize to percent.
+
+                                                                              * Map labels via choices_map if present.
+
+                                                                              * Pie chart with percentages and labels.
+
+                                                                                 * select_multiple:
+
+                                                                                    * Split responses by whitespace into exploded long format.
+
+                                                                                    * Count by option; compute percent over respondents with any non-missing for that question.
+
+                                                                                    * Map labels if available.
+
+                                                                                    * Bar chart with y-axis formatted 0–100%.
+
+                                                                                       * text:
+
+                                                                                          * List all raw answers (first 200 inline), plus a download of the full list.
+
+                                                                                             5. Exports:
+
+                                                                                                * Accumulate per-question summaries in dataframes.
+
+                                                                                                * Provide st.download_button for each.
+
+Quality requirements
+                                                                                                   * Defensive code (no crashes on oddities).
+
+                                                                                                   * Clear function names and docstrings.
+
+                                                                                                   * Legible chart titles and axis labels, with total N in subtitles.
+
+                                                                                                   * Respect question order strictly as given in questions.csv.
+
+Deliverables
+                                                                                                      * app.py implementing everything above.
+
+                                                                                                      * At the top of the app, show a small “How to use” note.
+
+Finally, write the code now.
+________________
+
+
+If you like, I can also generate app.py for you directly.

@@ -1,0 +1,139 @@
+type,name,label,analysis note
+start,starttime,,
+end,endtime,,
+deviceid,deviceid,,
+phonenumber,devicephonenum,,
+username,username,,
+calculate,today_date,,
+calculate,device_info,,
+calculate,duration,,
+caseid,caseid,,
+text audit,text_audit,,
+,,,
+begin group,basicinfo,,
+enumerator,enumerator,Please select the unique name for enumerator field. (Edit this label to meet your needs...),
+calculate,enumerator_id,,
+calculate,enumerator_name,,
+calculate,surveyor_name,,
+select_one state,state,Select the State where you are collecting data,
+select_one lga,lga,Select the Local Government Area (LGA) where you are collecting data,
+select_one ward,ward,Select the ward where you are collecting data,
+select_one facility,facility,Select the facility linked to the settlement where you are collecting data,
+geopoint,gps,"Please record your location.
+Wait until accuracy is lower than 40m before clicking “record location” in the pop-up window. ",
+end group,basicinfo,,
+,,,
+note,,"Hello, my name is [Your Name], and I am here today to learn more about the caregivers who come to this health facility. 
+
+We want to understand your experiences, challenges, and thoughts about health services. This will help us improve services and support for families like yours.
+
+Introduce the organisation you work for
+
+This interview will take around 20 minutes.
+
+Your answers will be kept private; they won't be shared with health facility staff, the State, or anyone in your community. Your honest feedback is very important to us. I will be using an interview app to go through the introduction and questions and record responses.",
+,,,
+select_one yesno,consent,Do you agree to participate in this interview?,
+begin group,consented_interview,,
+,,,
+begin group,demographics,,
+note,,I will start with a few questions about you and any children in the household,
+integer,age,Can you please tell me your age?,
+integer,household_size,How many people live in your household?,
+select_multiple household,household_members,Who lives in your household?,
+text,occupation,What is your occupation?,
+integer,children,"How many children do you have, if any?",
+integer,children_age,How many of these children are less than 3 years old?,
+integer,child_imm_age,"How old, in months is the child you have brought to immunization today",
+select_one yesno,immunisation_card,"Is the immunisation card of this child available? By available we mean, does the caregiver have it with them now?",
+end group,demographics,,
+,,,
+select_one yesno,immunisation_card_photo,Would it be ok if I took a photo of the vaccination card so that we can understand vaccination coverage in your area better?,
+image,imm_card_photo,Ask to take a photo of the immunization card (only the front side with their details),
+text,phone_number_card,Is it okay to write down the phone number that is written on the card?,
+,,,
+begin group,cellphone,,
+note,,"We work with health facilities to send reminders to caregivers cellphone to come to immunization, so I will now ask you some questions about your cellphone and cellphone number. We are not going to use your number for anything or give it to anyone.",
+select_one yesno,cellphone_own,Do you own a cellphone?,
+text,phone_number,"Can you tell me your phone number? 
+
+Make sure they are not reading the immunization card",
+select_one yesno,phone_number_check,Is this correct? (Repeat ${phone_number} back to them except replace the last number with the number 5),
+select_one yesno,cellphone_household,Does someone else in the household own a cellphone?,
+select_multiple household,cellphone_household_who,"If yes, who?",
+text,phone_number_household,"Can you tell me their phone number? 
+
+Make sure they are not reading the immunizaiton card",
+select_one yesno,phone_number_check_household,Is this correct? (Repeat ${phone_number_household} back to them except replace the last number with the number 5),
+end group,cellphone,,
+,,,
+begin group,self_signup,,
+select_one reading_level,readinglevel,"Show them the A5 poster.
+
+Can you please read this poster to me? ",
+text,poster_directions,"In your own words, what is this poster telling you to do?",
+select_multiple self_signup,follow_self_signup,"Can you please follow the instructions on the poster and show me your message once you have sent the text
+
+Tick all the statements that are true",
+text,follow_self_signup_other,Please describe what they are having difficulty with,
+end group,self_signup,,
+,,,
+begin group,vaccination_enablers,,
+select_multiple hear_info,hear_info,How do you normally hear about immunization sessions?,
+text,hear_info_other,"If other, please specify",
+select_multiple motivation,motivation,What motivates you to bring your child for immunization?,
+text,motivation_other,"If other, please specify",
+select_multiple influencers,influencers,Who influences your decision to immunize your child?,
+text,influencers_other,"If other, please specify",
+select_multiple enablers,enablers,What makes it easier for you to attend immunization sessions?,
+text,enablers_other,"If other, please specify",
+end group,vaccination_enablers,,
+,,,
+begin group,vaccination_barriers,,
+select_multiple barriers,barriers,What are the main difficulties you face in accessing immunization services?,
+text,barriers_other,"If other, please specify",
+select_one travel_methods,travel_methods,What mode of transport did you take to get to get here?,
+text,travel_methods_other,"If other, please specify",
+integer,travel_time,How many minutes do you travel to get to the facility?,
+integer,travel_cost,How much does it cost to get to the facility?,
+integer,barrier_number,"If we meet 10 caregivers in your community, how many would struggle with finding the money or time to bring their child for vaccination?",
+select_one support,community_support,Does everyone in your community have faith in immunisation?,
+select_one support,father_support,Do husbands/fathers generally support immunisation in your community?,
+select_multiple low_trust,low_trust,What are the reasons for the low faith in immunisation? (Select all that apply),
+text,low_trust_context,Please share more detail about the reasons for low faith in immunisation,
+end group,vaccination_barriers,,
+,,,
+,,,
+begin group,diarrhoea,,
+note,,"I am now going to ask about any illnesses  your child has had. It is very normal for young children to get sick, so please answer as best as you can",
+select_one yesno,diarrhoea_4w,Has your child (the one brought to immunization) had dirrhoea in the last 4 weeks?,
+select_one yesno,diarrhoea_3m,Have they had diarrhoea in the last 3 months?,
+select_multiple diarrhoea_mx_options,diarrhoea_treatment,"If they had diarrhoea, what treatment did the child receive?",
+text,diarrhoea_treatment_other,"If other, please specify",
+end group,diarrhoea,,
+,,,
+select_one yesno,use_ORS,Did you use ORS when the child had diarrhoea?,
+,,,
+begin group,message_testing,,
+select_multiple message_content,pidgin_message_1,"Make sure you are in a quiet place. Say; I am going to play you a pre-recorded message, I will then ask you some questions about it
+
+Play pidgin_message_1
+
+Ask: what did the message say?",
+select_one travel_days,pidgin_message_1_timing,When would you go to the facility?,
+text,pidgin_message_1_timing_other,"Other, please specify",
+select_multiple message_content,pidgin_message_2,"Make sure you are in a quiet place. Say; I am going to play you a pre-recorded message, I will then ask you some questions about it 
+
+Play pidgin_message_2 on your phone. Only play it once
+
+Ask: what did the message say? ",
+select_multiple message_action,pidgin_message_2_action,Pretend that you received this message while at home. What would you do if you received this message?,
+time,message_timing,What time of day would you most like us to send you this message?,
+select_one language,preferred_language,What language would you most like to receive the message in?,
+text,preferred_language_other,"Other, please specify",
+end group,message_testing,,
+,,,
+end group,consented_interview,,
+note,,"Thank you very much for your participation. This was my last question.
+
+Thank you for the answers provided today. They will help us make sure more caregivers and their children are in good health in Benue State.",
