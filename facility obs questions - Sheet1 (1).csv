@@ -1,0 +1,63 @@
+type,name,label
+start,starttime,
+end,endtime,
+deviceid,deviceid,
+phonenumber,devicephonenum,
+username,username,
+calculate,today_date,
+calculate,device_info,
+calculate,duration,
+caseid,caseid,
+text audit,text_audit,
+,,
+begin group,basicinfo,
+enumerator,enumerator,Please select the unique name for enumerator field. (Edit this label to meet your needs...)
+calculate,enumerator_id,
+calculate,enumerator_name,
+calculate,surveyor_name,
+select_one state,state,Select the State where you are collecting data
+select_one lga,lga,Select the Local Government Area (LGA) where you are collecting data
+select_one ward,ward,Select the ward where you are collecting data
+select_one facility,facility,Select the facility linked to the settlement where you are collecting data
+geopoint,gps,"Please record your location.
+Wait until accuracy is lower than 40m before clicking “record location” in the pop-up window. "
+end group,basicinfo,
+,,
+note,intro,"The following questions can be answered at any point throughout your visit, whenever you have the best chance. You can also always start, save your progress and come back to finish it. "
+,,
+begin group,health_talk,
+integer,howmanycaregivers,How many caregivers are present for the health talk? 
+select_multiple topics,topics,What topics are covered during the talk
+text,topics_other,Write all other topics covered
+select_multiple language,health_talk_language,What language(s) is the health talk done in
+text,health_talk_language_other,"If other, please specify"
+text,health_talk_comment,Any other comment on the health talk
+end group,health_talk,
+,,
+begin group,session_staff,
+integer,number_staff,"How many staff are directly involved in helping with the immunization session (either recording, immunizing, weighing children or another task) "
+select_one vaccine_retrieval,vaccine_retrieval,Where did the vaccines come from?
+select_one staff,healthcardstaff,Who is writing new child health cards 
+text,healthcardstaff_other,"Other, please specify"
+select_one staff,registerstaff,Who is recording in the immunization register?
+text,registerstaff_other,"Other, please specify"
+integer,session_attendance,How many caregivers total are there for the immunization session?
+text,staff_comment,Any other comments on the staffing or session attendance?
+end group,session_staff,
+,,
+begin group,order_operations,
+select_one yesnonotobserved,healthcard_ask_number,"Observe the person writing new child health cards, do they ask caregivers for their phone numbers?"
+select_one yesnonotobserved,healthcard_confirm_number,"Observe the person writing new child health cards, do they repeat the phone number back to the caregiver once they have ?"
+select_one imm_register_newline,imm_register_newline,For children coming back to this clinic for a follow up immunization: Do they find the names of these children already in the register or do they add them as a new line?
+select_one newinfo,imm_register_firstvisit,"For children that this is their first visit to this clinic for immunization: where does the name, phone number and settlement come from? Do they ask the caregiver directly or are they copying from the child health card?"
+select_one yesnonotobserved,imm_register_settlementsplit,Is the immunization register split into different settlements?
+select_one orderrecord,orderrecord,Are the immunzations a child received on the day recorded in their child health card before or after the child has actually been given the vaccinations?
+text,order_operations_comment,Any other comment about how the tasks are carried out during the session
+end group,order_operations,
+,,
+begin group,end_of_day,
+select_one yesnonotobserved,identifydefaulters,At the end of the session do they identify defaulters by looking at the facilty's child health cards?
+select_one yesnonotobserved,defaultercalling,Do they call caregivers who defaulted?
+end group,end_of_day,
+,,
+text,final_comments,Any final comments about the session you think we should know about?

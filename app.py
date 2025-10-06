@@ -46,21 +46,26 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 @st.cache_data
-def load_data():
-    """Load and cache the survey data files"""
+def load_data(survey_type='caregiver'):
+    """Load and cache the survey data files based on survey type"""
     try:
-        # Load the main survey data
-        survey_df = pd.read_csv('rawsurvey.csv')
-        
-        # Load questions metadata
-        questions_df = pd.read_csv('questions.csv')
-        
-        # Load choices metadata
-        choices_df = pd.read_csv('choices.csv')
+        if survey_type == 'caregiver':
+            # Load the main survey data
+            survey_df = pd.read_csv('rawsurvey.csv')
+            questions_df = pd.read_csv('questions.csv')
+            choices_df = pd.read_csv('choices.csv')
+        elif survey_type == 'facility':
+            survey_df = pd.read_csv('Facility observations analysis 23 Sep - Facility observations.csv')
+            questions_df = pd.read_csv('facility obs questions - Sheet1 (1).csv')
+            choices_df = pd.read_csv('choices.csv')
+        elif survey_type == 'health':
+            survey_df = pd.read_csv('NA Health worker survey export 23 sep - NA Health worker survey.csv')
+            questions_df = pd.read_csv('health worker questions - Sheet1.csv')
+            choices_df = pd.read_csv('choices.csv')
         
         return survey_df, questions_df, choices_df
     except FileNotFoundError as e:
-        st.error(f"Error loading data files: {e}")
+        st.error(f"Error loading {survey_type} data files: {e}")
         return None, None, None
 
 def get_question_info(question_name, questions_df):
@@ -85,6 +90,12 @@ def get_choice_labels(question_name, choices_df):
             choice_mapping[value] = label
     
     return choice_mapping
+
+def minutes_to_time_format(minutes):
+    """Convert minutes from midnight back to HH:MM format"""
+    hours = int(minutes // 60)
+    mins = int(minutes % 60)
+    return f"{hours:02d}:{mins:02d}"
 
 def categorize_jobs(job_responses):
     """Categorize job responses into meaningful groups"""
@@ -122,17 +133,32 @@ def categorize_jobs(job_responses):
     # Remove categories with 0 count
     return {k: v for k, v in categories.items() if v > 0}
 
-def create_grouped_data(numeric_data, question_name):
+def create_grouped_data(numeric_data, question_name, question_type=None, survey_type='caregiver'):
     """Create grouped data for integer questions with smart grouping logic"""
     if len(numeric_data) == 0:
         return None
     
-    # Special handling for age - show all individual ages
-    if 'age' in question_name.lower():
+    # Special handling for time questions - 1 hour blocks
+    if question_type == 'time':
+        def group_time_blocks(minutes):
+            hour = int(minutes // 60)
+            return f"{hour:02d}-{hour+1:02d}"
+        
+        grouped = numeric_data.apply(group_time_blocks)
+        # Sort by hour value
+        sorted_groups = grouped.value_counts().sort_index(key=lambda x: [int(block.split('-')[0]) for block in x])
+        return sorted_groups
+    
+    # For observations and health worker surveys - show individual responses without grouping
+    if survey_type in ['facility', 'health']:
         return numeric_data.value_counts().sort_index()
     
-    # Special handling for household size
-    if 'household_size' in question_name.lower() or 'household' in question_name.lower():
+    # Special handling for age - show all individual ages (caregiver survey only)
+    if 'age' in question_name.lower() and survey_type == 'caregiver':
+        return numeric_data.value_counts().sort_index()
+    
+    # Special handling for household size (caregiver survey only)
+    if ('household_size' in question_name.lower() or 'household' in question_name.lower()) and survey_type == 'caregiver':
         # Group household sizes: 1-2, 3-4, 5-6, 7-8, 9-10, 11+
         def household_group(x):
             if x <= 2:
@@ -154,8 +180,8 @@ def create_grouped_data(numeric_data, question_name):
         order = ["1-2 people", "3-4 people", "5-6 people", "7-8 people", "9-10 people", "11+ people"]
         return result.reindex([x for x in order if x in result.index])
     
-    # Special handling for travel time - use 15-minute chunks
-    if 'travel_time' in question_name.lower() or 'minutes' in question_name.lower():
+    # Special handling for travel time - use 15-minute chunks (caregiver survey only)
+    if ('travel_time' in question_name.lower() or 'minutes' in question_name.lower()) and survey_type == 'caregiver':
         def travel_group(x):
             if x <= 15:
                 return "0-15 min"
@@ -178,7 +204,7 @@ def create_grouped_data(numeric_data, question_name):
         order = ["0-15 min", "16-30 min", "31-45 min", "46-60 min", "61-90 min", "91-120 min", "120+ min"]
         return result.reindex([x for x in order if x in result.index])
     
-    # General integer grouping logic
+    # General integer grouping logic (caregiver survey only)
     min_val = numeric_data.min()
     max_val = numeric_data.max()
     data_range = max_val - min_val
@@ -214,7 +240,7 @@ def create_grouped_data(numeric_data, question_name):
     
     return numeric_data.value_counts().sort_index()
 
-def analyze_question(question_name, survey_df, questions_df, choices_df):
+def analyze_question(question_name, survey_df, questions_df, choices_df, survey_type='caregiver'):
     """Analyze a single question and return analysis results"""
     if question_name not in survey_df.columns:
         return None
@@ -300,9 +326,37 @@ def analyze_question(question_name, survey_df, questions_df, choices_df):
                                 for k, v in option_counts.items()}
         analysis['total_question_respondents'] = total_respondents
     
-    elif question_type in ['integer', 'decimal']:
-        # Numeric question
-        numeric_data = pd.to_numeric(question_data, errors='coerce').dropna()
+    elif question_type in ['integer', 'decimal', 'time']:
+        # Numeric question (including time questions)
+        if question_type == 'time':
+            # Handle time format data (HH:MM:SS)
+            time_data = question_data.dropna()
+            numeric_values = []
+            
+            for time_str in time_data:
+                try:
+                    # Try to parse time format HH:MM:SS or HH:MM
+                    if ':' in str(time_str):
+                        time_parts = str(time_str).split(':')
+                        if len(time_parts) >= 2:
+                            hours = int(time_parts[0])
+                            minutes = int(time_parts[1])
+                            # Convert to minutes from midnight (ignore seconds)
+                            total_minutes = hours * 60 + minutes
+                            numeric_values.append(total_minutes)
+                    else:
+                        # Try regular numeric conversion
+                        numeric_values.append(float(time_str))
+                except (ValueError, IndexError):
+                    continue
+            
+            if numeric_values:
+                numeric_data = pd.Series(numeric_values)
+            else:
+                numeric_data = pd.Series(dtype=float)
+        else:
+            # Regular numeric conversion for integer/decimal
+            numeric_data = pd.to_numeric(question_data, errors='coerce').dropna()
         
         if len(numeric_data) > 0:
             analysis['mean'] = numeric_data.mean()
@@ -313,12 +367,33 @@ def analyze_question(question_name, survey_df, questions_df, choices_df):
             analysis['histogram_data'] = numeric_data
             
             # Create grouped data for visualization
-            grouped_data = create_grouped_data(numeric_data, question_name)
+            grouped_data = create_grouped_data(numeric_data, question_name, question_type, survey_type)
             analysis['grouped_data'] = grouped_data
     
     elif question_type == 'text':
         # Text question - show all responses
         text_responses = question_data.astype(str)
+        
+        # Special handling for "other" questions - get actual text responses
+        if 'other' in question_name.lower():
+            # SurveyCTO exports duplicate columns for "other" questions
+            # Pandas renames them as question_name.1, question_name.2, etc.
+            # The text responses are in the .1 version
+            text_column = f"{question_name}.1"
+            
+            if text_column in survey_df.columns:
+                # Get text responses from the .1 column
+                text_responses = survey_df[text_column].dropna().astype(str)
+                
+                # Filter out empty/null responses
+                text_responses = text_responses[text_responses.str.strip() != '']
+                text_responses = text_responses[text_responses.str.lower() != 'nan']
+                text_responses = text_responses[text_responses.str.lower() != 'none']
+            else:
+                # Fallback to original logic if .1 column doesn't exist
+                text_responses = text_responses[text_responses.str.strip() != '']
+                text_responses = text_responses[text_responses.str.lower() != 'nan']
+        
         analysis['all_responses'] = text_responses.tolist()
         analysis['unique_responses'] = text_responses.nunique()
         analysis['total_responses'] = len(text_responses)
@@ -376,7 +451,7 @@ def create_visualization(question_result):
             title=f"Multiple Choice Responses: {question_result['label']}",
             labels={'Percentage': 'Percentage (%)', 'Option': 'Option'},
             color='Percentage',
-            color_continuous_scale='Blues',
+            color_continuous_scale='Viridis',
             hover_data={'Count': True}
         )
         
@@ -390,7 +465,7 @@ def create_visualization(question_result):
         fig.update_layout(showlegend=False)
         return fig
     
-    elif question_type in ['integer', 'decimal'] and 'grouped_data' in analysis:
+    elif question_type in ['integer', 'decimal', 'time'] and 'grouped_data' in analysis:
         # Grouped bar chart for numeric data
         grouped_data = analysis['grouped_data']
         if grouped_data is not None and len(grouped_data) > 0:
@@ -400,9 +475,17 @@ def create_visualization(question_result):
                 title=f"Distribution: {question_result['label']}",
                 labels={'x': 'Group', 'y': 'Count'},
                 color=grouped_data.values,
-                color_continuous_scale='Blues'
+                color_continuous_scale='Viridis'
             )
-            fig.update_layout(showlegend=False)
+            
+            # For time questions, make sure x-axis is treated as categorical
+            if question_type == 'time':
+                fig.update_layout(
+                    xaxis_type='category',
+                    showlegend=False
+                )
+            else:
+                fig.update_layout(showlegend=False)
             return fig
         else:
             # Fallback to histogram if grouping fails
@@ -466,36 +549,43 @@ def analyze_phone_number_matching(survey_df):
         'match_rate': (matches / total_comparisons * 100) if total_comparisons > 0 else 0
     }
 
-def main():
-    # Header
-    st.markdown('<h1 class="main-header">📊 SurveyCTO Data Analysis Dashboard</h1>', unsafe_allow_html=True)
-    
-    # Load data
-    survey_df, questions_df, choices_df = load_data()
+def analyze_survey(survey_type, survey_title):
+    """Analyze a specific survey"""
+    # Load data for this survey
+    survey_df, questions_df, choices_df = load_data(survey_type)
     
     if survey_df is None:
-        st.error("Failed to load data files. Please ensure all CSV files are in the same directory as this app.")
+        st.error(f"Failed to load {survey_title} data files. Please ensure all CSV files are in the same directory as this app.")
         return
     
     # Sidebar filters
-    st.sidebar.header("📋 Survey Overview")
+    st.sidebar.header(f"📋 {survey_title} Overview")
     
     # Basic statistics
     total_responses = len(survey_df)
     st.sidebar.metric("Total Responses", total_responses)
     
-    # Question type filter
-    question_types = questions_df['type'].dropna().unique()
-    selected_types = st.sidebar.multiselect(
-        "Filter by Question Type",
-        options=question_types,
-        default=question_types
+    # Filter out metadata rows and get actual questions
+    # Remove rows with empty names or special types like 'start', 'end', 'begin group', etc.
+    metadata_types = ['start', 'end', 'calculate', 'text audit', 'begin group', 'end group', 'note', 'geopoint']
+    actual_questions = questions_df[
+        questions_df['name'].notna() & 
+        (~questions_df['type'].isin(metadata_types)) &
+        (questions_df['name'] != '') &
+        (questions_df['name'].str.strip() != '')
+    ].copy()
+    
+    # Question name filter (instead of type filter)
+    question_names = actual_questions['name'].unique()
+    selected_questions = st.sidebar.multiselect(
+        "Filter by Question Name",
+        options=question_names,
+        default=question_names
     )
     
-    # Filter questions by type
-    filtered_questions = questions_df[
-        questions_df['type'].isin(selected_types) & 
-        questions_df['name'].notna()
+    # Filter questions by selected names
+    filtered_questions = actual_questions[
+        actual_questions['name'].isin(selected_questions)
     ]
     
     st.sidebar.metric("Questions to Analyze", len(filtered_questions))
@@ -520,7 +610,7 @@ def main():
             continue
         
         # Analyze question
-        question_result = analyze_question(question_name, survey_df, questions_df, choices_df)
+        question_result = analyze_question(question_name, survey_df, questions_df, choices_df, survey_type)
         
         # Skip questions with no data (auto-hide)
         if question_result is None:
@@ -624,28 +714,88 @@ def main():
                 st.write(f"**Question Respondents:** {analysis.get('total_question_respondents', 'N/A')}")
                 st.write(f"**Total Survey Respondents:** {len(survey_df)}")
         
-        elif question_result['type'] in ['integer', 'decimal']:
-            # Numeric results
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.subheader("Descriptive Statistics")
-                stats_df = pd.DataFrame({
-                    'Statistic': ['Mean', 'Median', 'Standard Deviation', 'Min', 'Max'],
-                    'Value': [
-                        f"{analysis['mean']:.2f}",
-                        f"{analysis['median']:.2f}",
-                        f"{analysis['std']:.2f}",
-                        f"{analysis['min']:.2f}",
-                        f"{analysis['max']:.2f}"
-                    ]
-                })
-                st.dataframe(stats_df, use_container_width=True)
-            
-            with col2:
-                st.subheader("Data Summary")
-                st.write(f"**Valid Responses:** {len(analysis['histogram_data'])}")
-                st.write(f"**Missing Values:** {question_result['missing_responses']}")
+        elif question_result['type'] in ['integer', 'decimal', 'time']:
+            # Numeric results - check if statistics exist
+            if all(key in analysis for key in ['mean', 'median', 'std', 'min', 'max']):
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.subheader("Descriptive Statistics")
+                    
+                    # Check if this is a time question to format differently
+                    if question_result['type'] == 'time':
+                        stats_df = pd.DataFrame({
+                            'Statistic': ['Mean Time', 'Median Time', 'Std Dev (min)', 'Earliest', 'Latest'],
+                            'Value': [
+                                minutes_to_time_format(analysis['mean']),
+                                minutes_to_time_format(analysis['median']),
+                                f"{analysis['std']:.1f} minutes",
+                                minutes_to_time_format(analysis['min']),
+                                minutes_to_time_format(analysis['max'])
+                            ]
+                        })
+                    else:
+                        stats_df = pd.DataFrame({
+                            'Statistic': ['Mean', 'Median', 'Standard Deviation', 'Min', 'Max'],
+                            'Value': [
+                                f"{analysis['mean']:.2f}",
+                                f"{analysis['median']:.2f}",
+                                f"{analysis['std']:.2f}",
+                                f"{analysis['min']:.2f}",
+                                f"{analysis['max']:.2f}"
+                            ]
+                        })
+                    st.dataframe(stats_df, use_container_width=True)
+                
+                with col2:
+                    st.subheader("Data Summary")
+                    if 'histogram_data' in analysis:
+                        st.write(f"**Valid Responses:** {len(analysis['histogram_data'])}")
+                    st.write(f"**Missing Values:** {question_result['missing_responses']}")
+                
+                # Special handling for time questions - show time_why responses
+                if question_result['type'] == 'time' and 'time_preference' in question_result['label'].lower():
+                    st.markdown("---")
+                    st.subheader("📝 Time Preference Explanations")
+                    
+                    # Try to find the corresponding time_why column
+                    time_why_column = None
+                    for col in survey_df.columns:
+                        if 'time_preference_why' in col.lower():
+                            time_why_column = col
+                            break
+                    
+                    if time_why_column and time_why_column in survey_df.columns:
+                        # Get time_why responses for non-empty time preferences
+                        time_responses = survey_df[question_name].dropna()
+                        why_responses = survey_df.loc[time_responses.index, time_why_column].dropna()
+                        
+                        # Filter out empty responses
+                        why_responses = why_responses[why_responses.str.strip() != '']
+                        why_responses = why_responses[why_responses.str.lower() != 'nan']
+                        
+                        if len(why_responses) > 0:
+                            st.write("**Reasons for time preferences:**")
+                            if len(why_responses) > 10:
+                                with st.expander(f"View all {len(why_responses)} explanations", expanded=False):
+                                    for i, response in enumerate(why_responses, 1):
+                                        st.write(f"**{i}.** {response}")
+                                
+                                # Show first few as preview
+                                st.write("**Preview (first 5 explanations):**")
+                                for i, response in enumerate(why_responses.head(5), 1):
+                                    st.write(f"**{i}.** {response}")
+                                if len(why_responses) > 5:
+                                    st.write(f"... and {len(why_responses) - 5} more (click expand to see all)")
+                            else:
+                                for i, response in enumerate(why_responses, 1):
+                                    st.write(f"**{i}.** {response}")
+                        else:
+                            st.info("No explanations provided for time preferences.")
+                    else:
+                        st.info("No corresponding 'why' question found for this time preference.")
+            else:
+                st.info("No numeric statistics available for this question.")
         
         elif question_result['type'] == 'text':
             # Text results
@@ -727,6 +877,30 @@ def main():
     # Footer
     st.markdown("---")
     st.markdown("**Analysis completed!** 📈")
+
+def main():
+    """Main function with page selection"""
+    # Page selection in sidebar
+    st.sidebar.title("📊 Survey Analysis")
+    
+    page = st.sidebar.selectbox(
+        "Select Survey to Analyze",
+        ["Caregiver Survey", "Facility Observations", "Health Worker Survey"]
+    )
+    
+    # Main header
+    st.markdown('<h1 class="main-header">📊 SurveyCTO Data Analysis Dashboard</h1>', unsafe_allow_html=True)
+    
+    # Route to appropriate survey analysis
+    if page == "Caregiver Survey":
+        st.markdown('<h2 style="color: #2c3e50; text-align: center;">👥 Caregiver Survey Analysis</h2>', unsafe_allow_html=True)
+        analyze_survey('caregiver', 'Caregiver Survey')
+    elif page == "Facility Observations":
+        st.markdown('<h2 style="color: #2c3e50; text-align: center;">🏥 Facility Observations Analysis</h2>', unsafe_allow_html=True)
+        analyze_survey('facility', 'Facility Observations')
+    elif page == "Health Worker Survey":
+        st.markdown('<h2 style="color: #2c3e50; text-align: center;">👨‍⚕️ Health Worker Survey Analysis</h2>', unsafe_allow_html=True)
+        analyze_survey('health', 'Health Worker Survey')
 
 if __name__ == "__main__":
     main()

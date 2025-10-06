@@ -1,0 +1,105 @@
+type,name,label
+start,starttime,
+end,endtime,
+deviceid,deviceid,
+phonenumber,devicephonenum,
+username,username,
+calculate,today_date,
+calculate,device_info,
+calculate,duration,
+caseid,caseid,
+text audit,text_audit,
+,,
+begin group,basicinfo,
+enumerator,enumerator,Please select the unique name for enumerator field. (Edit this label to meet your needs...)
+calculate,enumerator_id,
+calculate,enumerator_name,
+calculate,surveyor_name,
+select_one state,state,Select the State where you are collecting data
+select_one lga,lga,Select the Local Government Area (LGA) where you are collecting data
+select_one ward,ward,Select the ward where you are collecting data
+select_one facility,facility,Select the facility linked to the settlement where you are collecting data
+geopoint,gps,"Please record your location.
+Wait until accuracy is lower than 40m before clicking “record location” in the pop-up window. "
+end group,basicinfo,
+,,
+note,,The Immunization officer is the best person to ask these questions if they are available
+begin group,hw_details,
+select_one facility_role,role,What is your role here?
+text,role_other,"If other, please specify"
+select_one howlong,howlongworked,How long have you worked at this facility?
+select_multiple role,imm_day_role,"On immunization days, what are your role(s)?"
+text,imm_day_roleother,"If other, please specify"
+end group,hw_details,
+,,
+begin group,stock,
+select_one vaccine_stock_location,vaccine_retrieval_location,Where do you retrieve your vaccines from?
+select_one vaccine_retrieval_how_often,vaccine_retrieval_how_often_fridge,How often do you pick up new vaccines?
+select_one whenstockout,whenstockout,When was the last time you were stocked out of a vaccine?
+select_multiple antigen,antigenstockout,"In the last year, tell me all the antigens that you ever had a stockout for. (Leave blank if there were no stockouts)"
+end group,stock,
+,,
+begin group,sessions,
+select_one vaccination_frequency,fixed_vaccination_frequency,How often are fixed vaccination sessions held
+text,fixed_vacciantion_frequency_other,Other [specify]
+select_multiple days_of_the_week,fixed_vaccination_days,What day(s) of the week does vaccination happen at the facility?
+select_one vaccination_frequency,outreach_vaccination_frequency,"How often are you able to actually complete outreaches. We understand that funding for travel is sometimes difficult, so it is totally okay to say you are not conducting outreaches"
+text,outreach_vaccination_frequency_other,Other [specify]
+select_multiple days_of_the_week,outreach_vaccination_days,What day(s) of the week do you conduct outreaches?
+select_multiple outreachbarriers,outreachbarriers,What are the main barriers to conducting outreaches?
+text,outreachbarriers_other,Other [specify]
+end group,outreach,
+,,
+begin group,catchement,
+integer,catchement_pop,What is the total catchement population of this clinic?
+image,microplan,"Ask if you may take a photo of their microplan (this is usually a small map with the different communities/settlements served by the facility).
+
+Press 'add group' when prompted"
+end group,catchement,
+,,
+begin group,hwphone,
+select_one yesno,android_phone,Do you own an android phone?
+select_multiple formaptitude,formaptitude,"Please read this and follow the instructions. (Give them the HW handout)
+
+DO NOT HELP. IF THEY ASK FOR HELP, TELL THEM TO READ THE INSTRUCTIONS. IF THEY ARE UNABLE TO COMPLETE THE FORM, THEN SELECT THAT OPTION. 
+
+Observe what the HW does on their phone and select all statements that are true"
+text,struggles,What did the health worker struggle with the most?
+end group,hwphone,
+,,
+begin group,caregiver_preferences,
+note,,"We plan to send caregivers reminders to come to vaccination. We will send sms AND pre-recorded calls like this 
+
+play pidgin reminder_1"
+time,time_preference,"If we were to send text reminders and pre-recroded voice calls like this, what time of day would be best to send these messages.
+
+YOU ARE RECORDING IN 24 HOUR TIME E.G. 6PM = 1800"
+text,time_preference_why,Why do you think that time is best?
+text,reason_helpful,What are some reasons why sending these reminders might help caregivers come to vaccination?
+text,reason_unhelpful,What are some reasons why sending the message may NOT BE ENOUGH to make them come to vaccination?
+end group,caregiver_preferences,
+,,
+begin group,caregiver_phone,
+integer,phone_own_rate,"Out of 10 caregivers who attend immunization here, how many do you think own their own phone?"
+select_multiple defaulterproblems,defaulter_problems,Is there anything that makes calling caregivers for defaulter tracing difficult?
+text,defaulter_problems_other,"Other, please specify"
+end group,caregiver_phone,
+,,
+begin group,language,
+select_multiple language,language_spread,What languages do caregiver speak in this facility
+select_one language,language_common,Which language is most commonly spoken?
+integer,language_common_frequency,"Out of 10 caregivers at the facility, how many speak ${language_common}"
+end group,language,
+,,
+begin group,record_keeping_practices,
+select_multiple imm_register_organization,imm_register_organization,How is your immunization register organized?
+text,imm_register_organization_other,"If other, please specify"
+text,new_child_add,"If a new child came for immunization, where in the immunization register would you add them in the register?"
+text,old_child_add,"If a child who had already attended vaccination at your facility, where would you add their information in the register?"
+select_one yesno,same_recorders,Does the same staff member record in the immunization register every session?
+integer,num_recorders,How many different people record in the immunization register
+select_multiple staff,staff_recorders,Who are the people that records in the immunization register
+text,staff_recorders_other,"If other, please specify"
+end group,record_keeping_practices,
+,,
+note,,Thank you very much for your time. 
