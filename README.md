@@ -38,10 +38,12 @@ The application expects three CSV files in the same directory:
 
 ## Quick Start
 
+### Option 1: Run Locally
+
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/surveycto-analysis-dashboard.git
-   cd surveycto-analysis-dashboard
+   git clone https://github.com/sammyd97/-surveycto-analysis-dashboard.git
+   cd -surveycto-analysis-dashboard
    ```
 
 2. **Install Python dependencies:**
@@ -59,6 +61,22 @@ The application expects three CSV files in the same directory:
 
 5. **Open your browser:**
    - Navigate to `http://localhost:8501`
+
+### Option 2: Deploy to Streamlit Cloud (Recommended for Team Sharing)
+
+1. **Fork this repository** to your GitHub account
+2. **Go to [Streamlit Cloud](https://share.streamlit.io/)**
+3. **Click "New app"**
+4. **Connect your GitHub account** and select your forked repository
+5. **Configure deployment**:
+   - **Repository**: `yourusername/-surveycto-analysis-dashboard`
+   - **Branch**: `main`
+   - **Main file path**: `app.py`
+6. **Click "Deploy!"**
+7. **Share the generated URL** with your team
+
+### Live Demo
+The application is deployed and available at: **[https://surveycto-analysis-dashboard.streamlit.app/](https://surveycto-analysis-dashboard.streamlit.app/)**
 
 ## Usage
 
